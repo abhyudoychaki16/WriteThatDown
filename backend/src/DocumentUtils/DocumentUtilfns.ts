@@ -2,33 +2,65 @@
 // and also perform validation if the user performing 
 // the edits is authorized to do so.
 
+import { accessVerifier } from "../ActionMapUtils/ActorAccessVerification";
+import { COMMENT, DELETE, EDIT, MODIFY, VIEW } from "../ActionMapUtils/DocumentActorSpecifications";
+import { findFolder } from "../FolderUtils/FolderUtilfns";
+import { IDocument } from "../interfaces";
 import { Document } from "../models/Document";
-import Folder from "../models/Folder";
+import { Role } from "../types";
 
 
-// ideally, move all checks, in all functions to a common validator function somewhat similar to this:
-// const validator = (function: ['edit' | 'view' | ...], userID, docActorMap) => {
-//     return check(function, userID, docID);
-// }
-// which will be called by other functions
-
-
-export const editDocument = async (documentID: string, userID: string, changes: string): Promise<void> => {
+export const findDocument = async (documentID: string): Promise<IDocument> => {
     const document = await Document.findById(documentID);
     if(!document){
         throw new Error("Document doesn't exist!");
     }
-    const folder = await Folder.findById(document.parent);
-    if(!folder){
-        throw new Error("Folder has been deleted!");
+    return document;
+}
+
+
+export const viewDocument = async (documentID: string, userID: string): Promise<string> => {
+    const document = await findDocument(documentID);
+    const folder = await findFolder(document.parent);
+    
+    if(document.owner !== userID && !accessVerifier(document, userID, VIEW) && !accessVerifier(folder, userID, VIEW)){
+        throw new Error("User Unauthorized to view document! ");
     }
-    const actorMap = document.actorMap;
-    const folderActorMap = folder.actorMap;
-    if(document.owner !== userID && !actorMap.master.find(id => id === userID) && !actorMap.editor.find(id => id === userID)){
-        throw new Error("User Unauthorized to edit document!");
+    
+    return document.content;
+}
+
+export const addCommentToDocument = async (documentID: string, userID: string, commentToAdd: string): Promise<void> => {
+    const document = await findDocument(documentID);
+    const folder = await findFolder(document.parent);
+    
+    if(document.owner !== userID && !accessVerifier(document, userID, COMMENT) && !accessVerifier(folder, userID, COMMENT)){
+        throw new Error("User Unauthorized to add Comments to the document!");
     }
 
-    if(!folderActorMap.master.find(id => id === userID) && !folderActorMap.editor.find(id => id === userID)){
+    if(document.comments.find(comment => (comment.user ===  userID && comment.content === commentToAdd))){
+        throw new Error("Comment already present");
+    }
+    
+    // ws.broadcast({comments: comments})
+    try {
+        await Document.findByIdAndUpdate(documentID, {comments:
+            [...document.comments, {
+                user: userID,
+                comment: commentToAdd
+            }]
+        });
+    }
+    catch (error){
+        console.log("Failed to add edit to db!", error);
+    }
+}
+
+export const editDocument = async (documentID: string, userID: string, changes: string): Promise<void> => {
+    const document = await findDocument(documentID);
+    const folder = await findFolder(document.parent);
+
+    if(document.owner !== userID && !accessVerifier(document, userID, EDIT) && !accessVerifier(folder, userID, EDIT)){
         throw new Error("User Unauthorized to edit document!");
     }
 
@@ -42,24 +74,10 @@ export const editDocument = async (documentID: string, userID: string, changes: 
 }
 
 export const deleteDocument = async (documentID: string, userID: string): Promise<void> => {
-    const document = await Document.findOne({_id: documentID});
-    if(!document){
-        throw new Error("Document doesn't exist!");
-    }
+    const document = await findDocument(documentID);
+    const folder = await findFolder(document.parent);
 
-    const folder = await Folder.findById(document.parent);
-    if(!folder){
-        throw new Error("Folder has been deleted!");
-    }
-
-    const actorMap = document.actorMap;
-    const folderActorMap = folder.actorMap;
-
-    if(document.owner !== userID && !actorMap.master.find(id => id === userID)){
-        throw new Error("User Unauthorized to delete document! ");
-    }
-
-    if(!folderActorMap.master.find(id => id === userID)){
+    if(document.owner !== userID && !accessVerifier(document, userID, DELETE) && !accessVerifier(folder, userID, DELETE)){
         throw new Error("User Unauthorized to delete document! ");
     }
     
@@ -67,64 +85,26 @@ export const deleteDocument = async (documentID: string, userID: string): Promis
     await Document.findByIdAndDelete(documentID);
 }
 
-export const viewDocument = async (documentID: string, userID: string): Promise<string> => {
-    const document = await Document.findOne({_id: documentID});
-    if(!document){
-        throw new Error("Document doesn't exist!");
-    }
-    const folder = await Folder.findById(document.parent);
-    if(!folder){
-        throw new Error("Folder has been deleted!");
+export const modifyDocument = async (documentID: string, userID: string, userIDToAdd: string, roleToAdd: Role): Promise<void> => {
+    const document = await findDocument(documentID);
+    const folder = await findFolder(document.parent);
+
+    if(document.owner !== userID && !accessVerifier(document, userID, MODIFY) && !accessVerifier(folder, userID, MODIFY)){
+        throw new Error("User Unauthorized to modify document permissions! ");
     }
 
-    const actorMap = document.actorMap;
-    const folderActorMap = folder.actorMap;
-
-    if(document.owner !== userID && !actorMap.master.find(id => id === userID) && !actorMap.editor.find(id => id === userID) && !actorMap.commentator.find(id => id === userID) && !actorMap.viewer.find(id => id === userID)){
-        throw new Error("User Unauthorized to view document! ");
-    }
-
-    if(!folderActorMap.master.find(id => id === userID) && !folderActorMap.editor.find(id => id === userID) && !folderActorMap.commentator.find(id => id === userID) && !folderActorMap.viewer.find(id => id === userID)){
-        throw new Error("User Unauthorized to view document! ");
-    }
-    
-    return document.content;
-}
-
-export const addCommentToDocument = async (documentID: string, userID: string, commentToAdd: string): Promise<void> => {
-    const document = await Document.findOne({_id: documentID});
-    if(!document){
-        throw new Error("Document doesn't exist!");
-    }
-    
-    const folder = await Folder.findById(document.parent);
-    if(!folder){
-        throw new Error("Folder has been deleted!");
-    }
-
-    const actorMap = document.actorMap;
-    const folderActorMap = folder.actorMap;
-
-    if(document.owner !== userID && !actorMap.master.find(id => id === userID) && !actorMap.editor.find(id => id === userID) && !actorMap.commentator.find(id => id === userID)){
-        throw new Error("User Unauthorized to add Comments to the document!");
-    }
-    if(!folderActorMap.master.find(id => id === userID) && !folderActorMap.editor.find(id => id === userID) && !folderActorMap.commentator.find(id => id === userID)){
-        throw new Error("User Unauthorized to add Comments to the document!");
-    }
-    if(document.comments.find(comment => (comment.user ===  userID && comment.content === commentToAdd))){
-        throw new Error("Comment already present");
-    }
-
-    // ws.broadcast({comments: comments})
-    try {
-        await Document.findByIdAndUpdate(documentID, {comments:
-            [...document.comments, {
-                user: userID,
-                comment: commentToAdd
-            }]
-        });
-    }
-    catch (error){
-        console.log("Failed to add edit to db!", error);
-    }
+    const documentActorMap = document.actorMap;
+    const roles: Role[] = ["master", "editor", "viewer", "commentator"];
+    roles.forEach(role => {
+        if(role !== roleToAdd) {
+            // remove all existing roles, if any
+            documentActorMap[role] = documentActorMap[role].filter(id => id !== userIDToAdd);
+        }
+    })
+    documentActorMap[roleToAdd] = [...documentActorMap[roleToAdd], userIDToAdd]
+    await Document.findByIdAndUpdate(documentID,{
+        actorMap: documentActorMap
+    })
+    console.log(`Updated actor map for document: `);
+    console.log(documentActorMap);
 }

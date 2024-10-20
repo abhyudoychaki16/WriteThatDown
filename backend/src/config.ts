@@ -1,4 +1,5 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 const assertEnv = (variable: string | undefined, name: string): string => {
     if (variable === undefined) {

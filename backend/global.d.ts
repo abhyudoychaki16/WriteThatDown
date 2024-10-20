@@ -1,5 +1,3 @@
-import { IUser } from "./src/models/User";
-import { Socket } from "socket.io";
 declare namespace NodeJS {
     interface ProcessEnv {
       PORT: string;

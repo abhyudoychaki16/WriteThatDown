@@ -1,16 +1,5 @@
-import { Schema, model, Document, Types } from "mongoose";
-
-export interface IFolder extends Document{
-    _id: Types.ObjectId,
-    name: string,
-    actorMap: {
-        master: string[],
-        editor: string[],
-        commentator: string[],
-        viewer: string[],
-    },
-    documents: string[]
-}
+import { Schema, model } from "mongoose";
+import { IFolder } from "../interfaces";
 
 const FolderSchema = new Schema({
     name: {

@@ -1,21 +1,63 @@
 // provide utilities to manage folders, provide and check access
 
-import Folder, { IFolder } from "../models/Folder"
+import Folder from "../models/Folder"
+import { IFolder } from "../interfaces";
+import { DELETE, MODIFY, SWITCH } from "../ActionMapUtils/FolderActorSpecifications";
+import { accessVerifier } from "../ActionMapUtils/ActorAccessVerification";
+import { Document } from "../models/Document";
+import { Role } from "../types";
+
+export const findFolder = async (folderID: string): Promise<IFolder> => {
+    const folder = await Folder.findById(folderID);
+    if(!folder) {
+        throw new Error("Folder does not exist!");
+    }
+    return folder;
+}
 
 export const switchToFolder = async (folderID: string, userID: string): Promise<IFolder> => {
-    const folder = await Folder.findById(folderID);
-    if(!folder){
-        throw new Error("Folder does not exist");
-    }
-    if(folder.actorMap.master.find(ID => ID === userID) === undefined &&
-    folder.actorMap.editor.find(ID => ID === userID) === undefined &&
-    folder.actorMap.commentator.find(ID => ID === userID) === undefined && 
-    folder.actorMap.viewer.find(ID => ID === userID) === undefined){
+    const folder = await findFolder(folderID);
+    if(!accessVerifier(folder, userID, SWITCH)){
         throw new Error("Access not allowed");
     }
     return folder;
 }
 
-export const deleteFolder = () => {
-    return;
+export const modifyFolder = async (folderID: string, userID: string, userIDToAdd: string, roleToAdd: Role): Promise<void> => {
+    const folder = await findFolder(folderID);
+
+    if(!accessVerifier(folder, userID, MODIFY)){
+        throw new Error("User Unauthorized to modify folder permissions! ");
+    }
+
+    const folderActorMap = folder.actorMap;
+    const roles: Role[] = ["master", "editor", "viewer", "commentator"];
+    roles.forEach(role => {
+        if(role !== roleToAdd) {
+            // remove all existing roles, if any
+            folderActorMap[role] = folderActorMap[role].filter(id => id !== userIDToAdd);
+        }
+    })
+    folderActorMap[roleToAdd] = [...folderActorMap[roleToAdd], userIDToAdd]
+    await Folder.findByIdAndUpdate(folderID,{
+        actorMap: folderActorMap
+    })
+    console.log(`Updated actor map for folder: `);
+    console.log(folderActorMap);
+}
+
+export const deleteFolder = async (folderID: string, userID: string): Promise<string[]> => {
+    const folder = await findFolder(folderID);
+    if(!accessVerifier(folder, userID, DELETE)){
+        throw new Error("Access not allowed");
+    }
+    const documentIDs = folder.documents;
+    // recursively delete all documents in the folder
+    folder.documents.forEach(async (documentID) => {
+        await Document.findByIdAndDelete(documentID);
+    })
+
+    // ws.broadcast({folderID: folderID, delete: true})
+    await Folder.findByIdAndDelete(folder._id);
+    return documentIDs;
 }
