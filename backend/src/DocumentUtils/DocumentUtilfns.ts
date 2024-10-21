@@ -56,6 +56,28 @@ export const addCommentToDocument = async (documentID: string, userID: string, c
     }
 }
 
+const saveChanges = async (documentID: string, changes: string) => {
+    await Document.findByIdAndUpdate(documentID, {
+        content: changes // this line should be changed
+    })
+}
+
+type F = typeof saveChanges
+let timerId: NodeJS.Timeout | null = null;
+
+const debounce = (func: F, timeToWait: number): F => {
+    return async (...args: Parameters<typeof saveChanges>) => {
+        if (timerId !== null) {
+            clearTimeout(timerId);
+        }
+
+        timerId = setTimeout(async () => {
+            console.log("db called");
+            await func(...args);
+        }, timeToWait);
+    };
+}
+
 export const editDocument = async (documentID: string, userID: string, changes: string): Promise<void> => {
     const document = await findDocument(documentID);
     const folder = await findFolder(document.parent);
@@ -67,10 +89,20 @@ export const editDocument = async (documentID: string, userID: string, changes: 
     // const document = editorFlags.documentFlags.doc;
     // this would be required when we perform recon based changes
     
-    // ws.broadcast(document, {changes: changes})
-    await Document.findByIdAndUpdate(documentID, {
-        content: changes // this line should be changed
-    })
+    const debouncedSaveChanges = debounce(saveChanges, 1000);
+    // logic behind 1 second delay:
+    // average typing speed of a person: 200 characters per minute.
+    // this means 0.3 seconds per character
+    // or 300 ms per character
+    // autosave happens for every 3.33 characters best
+
+    // even if the person sends a save request to the backend,
+    // we can use this for now to avoid overwhelming the backend
+    // only con: max 3ms delay on pressing save,
+    // but that much is normal, also on apps like Notion, Google Docs
+    // will help to avoid overwhelming the backend.
+
+    await debouncedSaveChanges(documentID, changes);
 }
 
 export const deleteDocument = async (documentID: string, userID: string): Promise<void> => {
