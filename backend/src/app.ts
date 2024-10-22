@@ -3,7 +3,6 @@ import { Server } from 'socket.io'
 import { createServer } from 'http';
 import { port } from './config';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import { COMMENT_DOCUMENT, CREATE_DOCUMENT, CREATE_FOLDER, DELETE_DOCUMENT, DELETE_FOLDER, DISCONNECT, EDIT_DOCUMENT, EXIT_DOCUMENT, GET_DOCUMENT, GET_FOLDER, LOGIN, MODIFY_DOCUMENT, MODIFY_FOLDER, SIGNUP } from './socketEventTypes';
 import { connectToDatabase } from './db';
 import createDocument from './DocumentUtils/CreateDocument';
@@ -18,8 +17,19 @@ import { Role } from './types';
 // express setup
 const expressApp = express();
 expressApp.use(cors());
-expressApp.use(bodyParser);
 expressApp.use(express.json());
+expressApp.post('/' + SIGNUP, async (request, response) => {
+    console.log(request.body);
+    const { name, email, enterprise, password } = request.body;
+    try{
+        const user = await createUser(name, email, enterprise, password);
+        response.send(`you have signed up, your id is: ${user._id}`);
+    }
+    catch (error) {
+        console.log("Error: ", error);
+        response.send('Failed to create user');
+    }
+})
 const httpServer = createServer(expressApp);
 
 // Socket.IO setup
@@ -68,28 +78,6 @@ io.on('connection', (socket: UserSocket) => {
     socket.on('hello', (something: string) => {
         socket.send("I received your hello");
         console.log(`Hello received! This is ${something}`);
-    })
-
-    // 1. sign up
-    socket.on(SIGNUP, async (userInformation: {
-        name: string,
-        email: string,
-        enterprise: string,
-        password: string
-    }) => {
-        // create an account with the user information
-        console.log(`Signup received`)
-        console.log(userInformation);
-        const { name, email, enterprise, password } = userInformation;
-        try{
-            const user = await createUser(name, email, enterprise, password);
-            socket.send(`you have signed up, your id is: ${user._id}`);
-        }
-        catch (error) {
-            console.log("Error: ", error);
-            socket.send('Failed to create user');
-        }
-
     })
 
     // 2. log in
