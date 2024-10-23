@@ -23,11 +23,16 @@ expressApp.post('/' + SIGNUP, async (request, response) => {
     const { name, email, enterprise, password } = request.body;
     try{
         const user = await createUser(name, email, enterprise, password);
-        response.send(`you have signed up, your id is: ${user._id}`);
+        response.send({
+            type: "success",
+            id: user._id
+        });
     }
     catch (error) {
-        console.log("Error: ", error);
-        response.send('Failed to create user');
+        response.send({
+            type: "error",
+            error: error
+        })
     }
 })
 const httpServer = createServer(expressApp);
@@ -50,6 +55,7 @@ const documentConnectedTo: {
 } = {}
 
 const updateConnectionsUponDisconnect = ( socketID: string ) => {
+    // no socket.send because user disconnecting has nothing to do with informing
     const documentID = documentConnectedTo[socketID];
     if(documentID === undefined){
         return;
@@ -76,7 +82,10 @@ const updateConnectionsUponDocumentDelete = ( documentID: string ) => {
 io.on('connection', (socket: UserSocket) => {
     console.log(`User connected: ${socket.id}`)
     socket.on('hello', (something: string) => {
-        socket.send("I received your hello");
+        socket.send({
+            type: "success",
+            message: "Received your hello!"
+        });
         console.log(`Hello received! This is ${something}`);
     })
 
@@ -89,7 +98,10 @@ io.on('connection', (socket: UserSocket) => {
         // verify authentication
         const user = await verifyUserLogin(email, password);
         if(!user){
-            socket.send('Login cannot be verified. Disconnecting Connection.');
+            socket.send({
+                type: "error",
+                message: "Invalid Credentials!"
+            })
             socket.disconnect();
             return;
         }
@@ -99,7 +111,10 @@ io.on('connection', (socket: UserSocket) => {
         // disconnect from socket
         console.log(`Login received`)
         console.log(loginInformation);
-        socket.send('you have logged in');
+        socket.send({
+            type: "success",
+            message: "Login Successful!"
+        });
     })
 
     // 3. create folder
@@ -108,17 +123,26 @@ io.on('connection', (socket: UserSocket) => {
     }) => {
         const { name } = folderInformation;
         if (!socket.user){
-            socket.send("User is not validated!");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         const currentUser = socket.user;
         try{
             const folderID = await createFolder(name, String(currentUser._id));
-            socket.send(`Folder created with id: ${folderID}`);
+            socket.send({
+                type: "success",
+                id: folderID
+            });
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send("Failed to create folder!");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -128,17 +152,26 @@ io.on('connection', (socket: UserSocket) => {
     }) => {
         const { id } = folderInformation;
         if (!socket.user){
-            socket.send("User is not validated!");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         try{
             const currentUser = socket.user;
             const folder = await switchToFolder(id, String(currentUser._id));
-            socket.send(`Welcome to folder: ${folder.name}`)
+            socket.send({
+                type: "success",
+                folder: folder.name
+            })
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send("Failed to get folder");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -148,7 +181,10 @@ io.on('connection', (socket: UserSocket) => {
     }) => {
         const { id } = folderInformation;
         if (!socket.user){
-            socket.send("User is not validated!");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         try{
@@ -157,11 +193,17 @@ io.on('connection', (socket: UserSocket) => {
             documentIDsDeleted.forEach(documentID => {
                 updateConnectionsUponDocumentDelete(documentID);
             })
-            socket.send(`Folder deleted!`)
+            socket.send({
+                type: "success",
+                message: "Folder deleted!"
+            })
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send("Failed to delete folder");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -176,17 +218,26 @@ io.on('connection', (socket: UserSocket) => {
         console.log(`Modify document received`);
 
         if(!socket.user){
-            socket.send("User is not validated! Disconnecting...");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         const { folderID, userID, role } = permissions;
         try{
             await modifyFolder(folderID, String(socket.user._id), userID, role);
-            socket.send("Folder modified successfully!");
+            socket.send({
+                type: "success",
+                message: "Folder modified!"
+            })
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send("Failed to modify the folder");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -197,13 +248,19 @@ io.on('connection', (socket: UserSocket) => {
     }) => {
         const { name, parentFolderID } = documentInformation;
         if (!socket.user){
-            socket.send("User is not validated!");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         const currentUser = socket.user;
         try{
             const documentID = await createDocument(name, String(currentUser._id), parentFolderID);
-            socket.send(`Document created with id: ${documentID}`);
+            socket.send({
+                type: "success",
+                id: documentID
+            });
 
             if(connections[documentID] === undefined){
                 connections[documentID] = [];
@@ -212,7 +269,10 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send("Failed to create document");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     });
 
@@ -225,18 +285,24 @@ io.on('connection', (socket: UserSocket) => {
         const { id } = documentInformation;
         console.log(`Get document received`)
         if(!socket.user){
-            socket.send("User is not validated! Disconnecting...");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         if(documentConnectedTo[socket.id] === id){
-            socket.send("Already have document");
+            socket.send({
+                type: "error",
+                message: "Already Viewing Document!"
+            })
             return;
         }
         try{
             const content = await viewDocument(id, String(socket.user._id));
             socket.send({
-                message: 'you have gotten the document',
-                document: content,
+                type: "success",
+                document: content
             });
             if(connections[id] === undefined){
                 connections[id] = [];
@@ -245,27 +311,42 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send("Failed to get document!");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
     socket.on(EXIT_DOCUMENT, () => {
         console.log(`Exit document received`)
         if(!socket.user){
-            socket.send("User is not validated! Disconnecting...");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         if(!documentConnectedTo[socket.id]){
-            socket.send("No document to exit from");
+            socket.send({
+                type: "error",
+                message: "No document currently viewing!"
+            })
             return;
         }
         try{
             updateConnectionsUponDisconnect(socket.id);
-            socket.send('Exited!');
+            socket.send({
+                type: "success",
+                message: "Exited Successfully!"
+            })
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send("Failed to exit document!");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -279,13 +360,19 @@ io.on('connection', (socket: UserSocket) => {
         console.log(`Edit document received`);
 
         if(!socket.user){
-            socket.send("User is not validated! Disconnecting...");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         const { documentID, changes } = edits;
         try{
             await editDocument(documentID,String(socket.user?._id), changes);
-            socket.send("Document edited successfully!");
+            socket.send({
+                type: "success",
+                message: "Document edited successfully"
+            })
 
             // broadcast the changes across
             connections[documentID].forEach(sock => {
@@ -300,7 +387,10 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send("Failed to edit the document");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -316,17 +406,26 @@ io.on('connection', (socket: UserSocket) => {
         console.log(`Modify document received`);
 
         if(!socket.user){
-            socket.send("User is not validated! Disconnecting...");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         const { documentID, userID, role } = permissions;
         try{
             await modifyDocument(documentID, String(socket.user._id), userID, role);
-            socket.send("Document modified successfully!");
+            socket.send({
+                type: "success",
+                message: "Document modified successfully!"
+            })
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send("Failed to modify the document");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -339,7 +438,10 @@ io.on('connection', (socket: UserSocket) => {
         console.log(`Delete document received`);
 
         if(! socket.user){
-            socket.send("User is not validated! Disconnecting...");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         const { documentID } = documentInformation;
@@ -350,6 +452,7 @@ io.on('connection', (socket: UserSocket) => {
             connections[documentID].forEach(sock => {
                 if(sock !== socket){
                     sock.send({
+                        type: "success",
                         id: documentID,
                         delete: true, // will trigger the frontend to show a delete layover on the frontend
                         userID: String(socket.user?.name),
@@ -362,7 +465,10 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send("Failed to delete the document");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
@@ -375,13 +481,19 @@ io.on('connection', (socket: UserSocket) => {
         console.log(`Comment document received`);
 
         if(!socket.user){
-            socket.send("User is not validated! Disconnecting...");
+            socket.send({
+                type: "error",
+                message: "Login not validated!"
+            })
             return;
         }
         const { documentID, comment } = commentInformation;
         try{
             await addCommentToDocument(documentID, String(socket.user._id), comment);
-            socket.send("Comment added successfully!");
+            socket.send({
+                type: "success",
+                message: "Comment added successfully!"
+            })
 
             // broadcast the changes across
             connections[documentID].forEach(sock => {
@@ -396,7 +508,10 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send("Failed to edit the document");
+            socket.send({
+                type: "error",
+                error: error
+            })
         }
     })
 
