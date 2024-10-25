@@ -98,7 +98,7 @@ export const editDocument = async (documentID: string, userID: string, changes: 
 
     // even if the person sends a save request to the backend,
     // we can use this for now to avoid overwhelming the backend
-    // only con: max 3ms delay on pressing save,
+    // only con: max 1 second delay on pressing save,
     // but that much is normal, also on apps like Notion, Google Docs
     // will help to avoid overwhelming the backend.
 

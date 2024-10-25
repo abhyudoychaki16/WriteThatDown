@@ -11,7 +11,7 @@ import { addCommentToDocument, deleteDocument, editDocument, modifyDocument, vie
 import { UserSocket } from './interfaces';
 import { createUser } from './UserUtils/CreateUser';
 import { deleteFolder, modifyFolder, switchToFolder } from './FolderUtils/FolderUtilfns';
-import { verifyUserLogin } from './UserUtils/Login';
+import { verifyJWTTokenAndConnect, verifyUserLogin } from './UserUtils/Login';
 import { Role } from './types';
 
 // express setup
@@ -38,7 +38,12 @@ expressApp.post('/' + SIGNUP, async (request, response) => {
 const httpServer = createServer(expressApp);
 
 // Socket.IO setup
-const io = new Server(httpServer);
+const io = new Server(httpServer,{
+    cors: {
+      origin: "http://localhost:5173",
+      methods: ["GET", "POST"]
+    }
+});
 
 const connections: {
     [key: string]: UserSocket[]
@@ -79,6 +84,19 @@ const updateConnectionsUponDocumentDelete = ( documentID: string ) => {
     delete connections[documentID];
 }
 
+io.use(async (socket: UserSocket, next) => {
+    const token = socket.handshake.auth.token;
+    if(token){
+        const user = await verifyJWTTokenAndConnect(token);
+        if(user){
+            console.log("User validated from token!")
+            socket.user = user;
+        }
+    }
+
+    next();
+})
+
 io.on('connection', (socket: UserSocket) => {
     console.log(`User connected: ${socket.id}`)
     socket.on('hello', (something: string) => {
@@ -96,8 +114,8 @@ io.on('connection', (socket: UserSocket) => {
     }) => {
         const { email, password } = loginInformation
         // verify authentication
-        const user = await verifyUserLogin(email, password);
-        if(!user){
+        const verifiedLogin = await verifyUserLogin(email, password);
+        if(!verifiedLogin){
             socket.send({
                 type: "error",
                 message: "Invalid Credentials!"
@@ -105,7 +123,7 @@ io.on('connection', (socket: UserSocket) => {
             socket.disconnect();
             return;
         }
-        socket.user = user;
+        socket.user = verifiedLogin.user;
         // if connection cannot be verified,
         // terminate connection and send
         // disconnect from socket
@@ -113,7 +131,8 @@ io.on('connection', (socket: UserSocket) => {
         console.log(loginInformation);
         socket.send({
             type: "success",
-            message: "Login Successful!"
+            message: "Login Successful!",
+            token: verifiedLogin.token
         });
     })
 
