@@ -5,6 +5,7 @@
 export const LOGIN = 'login';
 export const SIGNUP = 'signup';
 export const DISCONNECT = 'disconnect';
+export const CHECKFORUSER = 'check';
 
 // document level (DOCUMENT)
 export const CREATE_DOCUMENT = 'createDocument' // create
@@ -20,5 +21,4 @@ export const CREATE_FOLDER = 'createFolder' // create
 export const GET_FOLDER = 'getFolder'; // read
 export const MODIFY_FOLDER = 'modifyFolder'; // modify folder information, permissions
 export const DELETE_FOLDER = 'deleteFolder'; // delete
-
-// interfacing events (when two entities are used together)
+export const GET_ALL_FOLDERS = 'getAllFolders'; // get all folders a user can view

@@ -61,3 +61,17 @@ export const deleteFolder = async (folderID: string, userID: string): Promise<st
     await Folder.findByIdAndDelete(folder._id);
     return documentIDs;
 }
+
+export const getFoldersForUser = async (userID: string): Promise <{id:string, name: string}[]> => { 
+    const roles = ["master", "editor", "viewer", "commentator"]
+    const query = {
+        $or: roles.map(role => ({ [`actorMap.${role}`]: userID }))
+    };
+    
+    const folders = await Folder.find(query);
+    const folderMap: {id:string, name: string}[] = [];
+    folders.map(folder => {
+        folderMap.push({id: String(folder._id), name: folder.name})
+    });
+    return folderMap;
+}

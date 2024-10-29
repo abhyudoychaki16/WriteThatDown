@@ -3,14 +3,14 @@ import { Server } from 'socket.io'
 import { createServer } from 'http';
 import { port } from './config';
 import cors from 'cors';
-import { COMMENT_DOCUMENT, CREATE_DOCUMENT, CREATE_FOLDER, DELETE_DOCUMENT, DELETE_FOLDER, DISCONNECT, EDIT_DOCUMENT, EXIT_DOCUMENT, GET_DOCUMENT, GET_FOLDER, LOGIN, MODIFY_DOCUMENT, MODIFY_FOLDER, SIGNUP } from './socketEventTypes';
+import { COMMENT_DOCUMENT, CREATE_DOCUMENT, CREATE_FOLDER, DELETE_DOCUMENT, DELETE_FOLDER, DISCONNECT, EDIT_DOCUMENT, EXIT_DOCUMENT, GET_ALL_FOLDERS, GET_DOCUMENT, GET_FOLDER, LOGIN, MODIFY_DOCUMENT, MODIFY_FOLDER, SIGNUP } from './socketEventTypes';
 import { connectToDatabase } from './db';
 import createDocument from './DocumentUtils/CreateDocument';
 import createFolder from './FolderUtils/CreateFolder';
 import { addCommentToDocument, deleteDocument, editDocument, modifyDocument, viewDocument } from './DocumentUtils/DocumentUtilfns';
 import { UserSocket } from './interfaces';
 import { createUser } from './UserUtils/CreateUser';
-import { deleteFolder, modifyFolder, switchToFolder } from './FolderUtils/FolderUtilfns';
+import { deleteFolder, getFoldersForUser, modifyFolder, switchToFolder } from './FolderUtils/FolderUtilfns';
 import { verifyJWTTokenAndConnect, verifyUserLogin } from './UserUtils/Login';
 import { Role } from './types';
 
@@ -74,12 +74,12 @@ const updateConnectionsUponDisconnect = ( socketID: string ) => {
 
 const updateConnectionsUponDocumentDelete = ( documentID: string ) => {
     const sockets = connections[documentID];
-    sockets.forEach((socket) => {
-        socket.send({
+    sockets.forEach((sock) => {
+        sock.send({
             id: documentID,
             delete: true, // will trigger the frontend to show a delete layover on the frontend
         })
-        delete documentConnectedTo[socket.id];
+        delete documentConnectedTo[sock.id];
     })
     delete connections[documentID];
 }
@@ -89,36 +89,37 @@ io.use(async (socket: UserSocket, next) => {
     if(token){
         const user = await verifyJWTTokenAndConnect(token);
         if(user){
+            // verification successful
             console.log("User validated from token!")
             socket.user = user;
+            next();
+        }
+        else{
+            // token expired, login
+            socket.disconnect();
         }
     }
-
-    next();
+    else{
+        next();
+    }
 })
 
 io.on('connection', (socket: UserSocket) => {
-    console.log(`User connected: ${socket.id}`)
-    socket.on('hello', (something: string) => {
-        socket.send({
-            type: "success",
-            message: "Received your hello!"
-        });
-        console.log(`Hello received! This is ${something}`);
+    socket.on("hello", (content: string) => {
+        console.log(content);
     })
-
     // 2. log in
     socket.on(LOGIN, async (loginInformation: {
         email: string,
         password: string,
-    }) => {
+    }, callback) => {
         const { email, password } = loginInformation
         // verify authentication
         const verifiedLogin = await verifyUserLogin(email, password);
         if(!verifiedLogin){
-            socket.send({
+            callback({
                 type: "error",
-                message: "Invalid Credentials!"
+                error: "Invalid Credentials!"
             })
             socket.disconnect();
             return;
@@ -129,20 +130,20 @@ io.on('connection', (socket: UserSocket) => {
         // disconnect from socket
         console.log(`Login received`)
         console.log(loginInformation);
-        socket.send({
+        callback({
             type: "success",
-            message: "Login Successful!",
             token: verifiedLogin.token
         });
+        
     })
 
     // 3. create folder
     socket.on(CREATE_FOLDER, async (folderInformation: {
         name: string,
-    }) => {
+    }, callback) => {
         const { name } = folderInformation;
         if (!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -151,14 +152,14 @@ io.on('connection', (socket: UserSocket) => {
         const currentUser = socket.user;
         try{
             const folderID = await createFolder(name, String(currentUser._id));
-            socket.send({
+            callback({
                 type: "success",
                 id: folderID
             });
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -168,10 +169,10 @@ io.on('connection', (socket: UserSocket) => {
     // 4. get folder
     socket.on(GET_FOLDER, async (folderInformation: {
         id: string,
-    }) => {
+    }, callback) => {
         const { id } = folderInformation;
         if (!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -180,14 +181,15 @@ io.on('connection', (socket: UserSocket) => {
         try{
             const currentUser = socket.user;
             const folder = await switchToFolder(id, String(currentUser._id));
-            socket.send({
+            callback({
                 type: "success",
-                folder: folder.name
+                folder: folder.name,
+                documents: folder.documents
             })
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -197,10 +199,10 @@ io.on('connection', (socket: UserSocket) => {
     // 4a. delete folder
     socket.on(DELETE_FOLDER, async (folderInformation: {
         id: string,
-    }) => {
+    }, callback) => {
         const { id } = folderInformation;
         if (!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -212,14 +214,14 @@ io.on('connection', (socket: UserSocket) => {
             documentIDsDeleted.forEach(documentID => {
                 updateConnectionsUponDocumentDelete(documentID);
             })
-            socket.send({
+            callback({
                 type: "success",
                 message: "Folder deleted!"
             })
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -230,14 +232,14 @@ io.on('connection', (socket: UserSocket) => {
         folderID: string,
         userID: string,
         role: Role
-    }) => {
+    }, callback) => {
         // verify the user
         // and update the document
         // if the user is allowed to modify the permissions
         console.log(`Modify document received`);
 
         if(!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -246,14 +248,41 @@ io.on('connection', (socket: UserSocket) => {
         const { folderID, userID, role } = permissions;
         try{
             await modifyFolder(folderID, String(socket.user._id), userID, role);
-            socket.send({
+            callback({
                 type: "success",
                 message: "Folder modified!"
             })
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send({
+            callback({
+                type: "error",
+                error: error
+            })
+        }
+    })
+
+    socket.on(GET_ALL_FOLDERS, async (callback) => {
+        console.log(`Get all folders received`);
+
+        if(!socket.user){
+            callback({
+                type: "error",
+                message: "Login not validated!"
+            })
+            return;
+        }
+        const userID = String(socket.user?._id);
+        try{
+            const folders = await getFoldersForUser(userID);
+            callback({
+                type: "success",
+                folders: folders
+            })
+        }
+        catch(error) {
+            console.log("Error: ", error);
+            callback({
                 type: "error",
                 error: error
             })
@@ -264,10 +293,10 @@ io.on('connection', (socket: UserSocket) => {
     socket.on(CREATE_DOCUMENT, async (documentInformation: {
         name: string,
         parentFolderID: string, // id being sent here
-    }) => {
+    }, callback) => {
         const { name, parentFolderID } = documentInformation;
         if (!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -276,7 +305,7 @@ io.on('connection', (socket: UserSocket) => {
         const currentUser = socket.user;
         try{
             const documentID = await createDocument(name, String(currentUser._id), parentFolderID);
-            socket.send({
+            callback({
                 type: "success",
                 id: documentID
             });
@@ -288,7 +317,7 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error){
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -298,20 +327,20 @@ io.on('connection', (socket: UserSocket) => {
     // 6. get document
     socket.on(GET_DOCUMENT, async (documentInformation: {
         id: string
-    }) => {
+    }, callback) => {
         // send the document content
         // from the db
         const { id } = documentInformation;
         console.log(`Get document received`)
         if(!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
             return;
         }
         if(documentConnectedTo[socket.id] === id){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Already Viewing Document!"
             })
@@ -319,7 +348,7 @@ io.on('connection', (socket: UserSocket) => {
         }
         try{
             const content = await viewDocument(id, String(socket.user._id));
-            socket.send({
+            callback({
                 type: "success",
                 document: content
             });
@@ -330,24 +359,24 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
         }
     })
 
-    socket.on(EXIT_DOCUMENT, () => {
+    socket.on(EXIT_DOCUMENT, (callback) => {
         console.log(`Exit document received`)
         if(!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
             return;
         }
         if(!documentConnectedTo[socket.id]){
-            socket.send({
+            callback({
                 type: "error",
                 message: "No document currently viewing!"
             })
@@ -355,14 +384,14 @@ io.on('connection', (socket: UserSocket) => {
         }
         try{
             updateConnectionsUponDisconnect(socket.id);
-            socket.send({
+            callback({
                 type: "success",
                 message: "Exited Successfully!"
             })
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -373,13 +402,13 @@ io.on('connection', (socket: UserSocket) => {
     socket.on(EDIT_DOCUMENT, async (edits: {
         documentID: string,
         changes: string
-    }) => {
+    }, callback) => {
         // verify the user
         // and update the document
         console.log(`Edit document received`);
 
         if(!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -388,7 +417,7 @@ io.on('connection', (socket: UserSocket) => {
         const { documentID, changes } = edits;
         try{
             await editDocument(documentID,String(socket.user?._id), changes);
-            socket.send({
+            callback({
                 type: "success",
                 message: "Document edited successfully"
             })
@@ -406,7 +435,7 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -418,14 +447,14 @@ io.on('connection', (socket: UserSocket) => {
         documentID: string,
         userID: string,
         role: Role
-    }) => {
+    }, callback) => {
         // verify the user
         // and update the document
         // if the user is allowed to modify the permissions
         console.log(`Modify document received`);
 
         if(!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -434,14 +463,14 @@ io.on('connection', (socket: UserSocket) => {
         const { documentID, userID, role } = permissions;
         try{
             await modifyDocument(documentID, String(socket.user._id), userID, role);
-            socket.send({
+            callback({
                 type: "success",
                 message: "Document modified successfully!"
             })
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -451,13 +480,13 @@ io.on('connection', (socket: UserSocket) => {
     // 8. delete document
     socket.on(DELETE_DOCUMENT, async (documentInformation: {
         documentID: string,
-    }) => {
+    }, callback) => {
         // verify the user
         // and delete the document
         console.log(`Delete document received`);
 
         if(! socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -480,11 +509,14 @@ io.on('connection', (socket: UserSocket) => {
             })
 
             updateConnectionsUponDocumentDelete(documentID);
-            socket.send("Document deleted successfully!");
+            callback({
+                type: "success",
+                "message": "Document deleted successfully!"
+            });
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })
@@ -494,13 +526,13 @@ io.on('connection', (socket: UserSocket) => {
     socket.on(COMMENT_DOCUMENT, async (commentInformation: {
         documentID: string,
         comment: string
-    }) => {
+    }, callback) => {
         // verify the user
         // and add comment to the document
         console.log(`Comment document received`);
 
         if(!socket.user){
-            socket.send({
+            callback({
                 type: "error",
                 message: "Login not validated!"
             })
@@ -509,7 +541,7 @@ io.on('connection', (socket: UserSocket) => {
         const { documentID, comment } = commentInformation;
         try{
             await addCommentToDocument(documentID, String(socket.user._id), comment);
-            socket.send({
+            callback({
                 type: "success",
                 message: "Comment added successfully!"
             })
@@ -527,7 +559,7 @@ io.on('connection', (socket: UserSocket) => {
         }
         catch(error) {
             console.log("Error: ", error);
-            socket.send({
+            callback({
                 type: "error",
                 error: error
             })

@@ -34,7 +34,7 @@ export const verifyJWTTokenAndConnect = async (token: string): Promise<IUser | u
         console.log(decoded)
     }
     catch {
-        console.log("Error")
+        console.log("Verify Error")
         return;
     }
     const user = await User.findOne({ email: (decoded as TokenInterface).email });

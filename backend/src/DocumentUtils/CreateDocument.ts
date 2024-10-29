@@ -32,7 +32,7 @@ const createDocument = async (
         parent: parentFolder
     });
     await document.save();
-    await Folder.findById(parentFolder, {
+    await Folder.findByIdAndUpdate(parentFolder, {
         documents: [...folder.documents, document._id]
     });
     console.log('A new document created!');
