@@ -1,12 +1,13 @@
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
+import { backendURL } from "../config";
 
 export const sendSignupData = async (name: string, email: string, enterprise: string, password: string): Promise<boolean> => {
     const response: {
         type: string,
         error?: string,
         id?: string,
-    } = await axios.post("http://localhost:5050/signup", {
+    } = await axios.post(`${backendURL}/signup`, {
         name: name,
         email: email,
         enterprise: enterprise,
@@ -22,7 +23,7 @@ export const sendSignupData = async (name: string, email: string, enterprise: st
 export const connectToSocket = (token? : string): Promise<Socket | null> => {
     return new Promise((resolve) => {
         if(token) {
-            const socket = io("http://localhost:5050", {
+            const socket = io(backendURL, {
                 autoConnect: true,
                 auth: {
                     token: token
@@ -49,7 +50,7 @@ export const sendLoginData = async (email: string, password: string): Promise<{
     type: string,
 }> => {
     return new Promise(( resolve ) => {
-        const socket = io("http://localhost:5050", {
+        const socket = io(backendURL, {
             autoConnect: true,
         });
         socket.connect();
@@ -109,6 +110,53 @@ export const createDocumentInFolder = async (socket: Socket, name: string, folde
                 resolve({type:"error"})
             }
             resolve({type:"success", documentID: response.id});
+        })
+    })
+}
+
+export const createNewFolder = async (socket: Socket, name: string): Promise<{type: string, folderID?: string}> => {
+    return new Promise(( resolve ) => {
+        socket.emit("createFolder", ({ name: name }), (response: {
+            type: string,
+            message?: string,
+            id?: string,
+            error?: string
+        }) => {
+            if(response.type === "error"){
+                resolve({type:"error"})
+            }
+            resolve({type:"success", folderID: response.id});
+        })
+    })
+}
+
+export const getDocumentContent = async (socket: Socket, documentID: string): Promise<{type: string, content?: string}> => {
+    return new Promise(( resolve ) => {
+        socket.emit("getDocument", ({ id: documentID }), (response: {
+            type: string,
+            message?: string,
+            document?: string,
+            error?: string,
+        }) => {
+            if(response.type === "error"){
+                resolve({type:"error"})
+            }
+            resolve({type:"success", content: response.document!});
+        })
+    })
+}
+
+export const sendChangesInData = async (socket: Socket, documentID: string, changes: []): Promise<{ type: string }> => {
+    return new Promise(( resolve ) => {
+        socket.emit("editDocument", ({ documentID: documentID, changes: changes }), (response: {
+            type: string,
+            message?: string,
+            error?: string,
+        }) => {
+            if(response.type === "error"){
+                resolve({type:"error"})
+            }
+            resolve({ type:"success" });
         })
     })
 }

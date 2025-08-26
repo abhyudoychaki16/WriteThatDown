@@ -19,7 +19,7 @@ const Login: React.FC = () => {
         // backend
         const {type, token, socket} = await sendLoginData(email, password);
         if(type === "error"){
-            console.log("Login failed");
+            alert("Login Failed");
             setSocket?.(null);
         }
         else {

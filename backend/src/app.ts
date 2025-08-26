@@ -1,7 +1,7 @@
 import express from 'express';
 import { Server } from 'socket.io'
 import { createServer } from 'http';
-import { port } from './config';
+import { frontendURL, port } from './config';
 import cors from 'cors';
 import { COMMENT_DOCUMENT, CREATE_DOCUMENT, CREATE_FOLDER, DELETE_DOCUMENT, DELETE_FOLDER, DISCONNECT, EDIT_DOCUMENT, EXIT_DOCUMENT, GET_ALL_FOLDERS, GET_DOCUMENT, GET_FOLDER, LOGIN, MODIFY_DOCUMENT, MODIFY_FOLDER, SIGNUP } from './socketEventTypes';
 import { connectToDatabase } from './db';
@@ -40,7 +40,7 @@ const httpServer = createServer(expressApp);
 // Socket.IO setup
 const io = new Server(httpServer,{
     cors: {
-      origin: "http://localhost:5173",
+      origin: frontendURL,
       methods: ["GET", "POST"]
     }
 });
@@ -331,7 +331,7 @@ io.on('connection', (socket: UserSocket) => {
         // send the document content
         // from the db
         const { id } = documentInformation;
-        console.log(`Get document received`)
+        console.log(`Get document received for document id: ${id}`);
         if(!socket.user){
             callback({
                 type: "error",
@@ -401,12 +401,12 @@ io.on('connection', (socket: UserSocket) => {
     // 7. edit
     socket.on(EDIT_DOCUMENT, async (edits: {
         documentID: string,
-        changes: string
+        changes: {}[],
     }, callback) => {
         // verify the user
         // and update the document
-        console.log(`Edit document received`);
-
+        console.log(edits);
+        console.log(`Edit document received for document id: ${edits.documentID}`);
         if(!socket.user){
             callback({
                 type: "error",
@@ -423,13 +423,15 @@ io.on('connection', (socket: UserSocket) => {
             })
 
             // broadcast the changes across
+            console.log(connections[documentID].forEach(sock => console.log(sock)));
             connections[documentID].forEach(sock => {
-                if(sock !== socket){
-                    sock.send({
+                if(sock.connected && sock.id !== socket.id){
+                    sock.emit("editDocument", {
                         id: documentID,
                         changes: changes,
                         userID: String(socket.user?.name),
                     })
+                    console.log("Changes broadcasted to ", sock.user?.name);
                 }
             })
         }

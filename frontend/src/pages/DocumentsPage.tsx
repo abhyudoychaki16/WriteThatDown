@@ -3,15 +3,17 @@ import { connectToSocket, createDocumentInFolder, getFolderContents } from "../u
 import { AppSocketContext } from "../utils/context";
 import { useNavigate, useParams } from "react-router-dom";
 import DocumentCard from "../components/DocumentCard";
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from "@mui/material";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Fab, TextField, Typography } from "@mui/material";
+import Logout from "../components/Logout";
+import AddIcon from '@mui/icons-material/Add';
 
 const DocumentsPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { socket, setSocket } = useContext(AppSocketContext);
     const [documents, setDocuments] = useState<string[]>([]);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [newDocumentName, setNewDocumentName] = useState('');
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+    const [newDocumentName, setNewDocumentName] = useState<string>('');
     useEffect(() => {
         if (socket === null) {
             const token = localStorage.getItem('token');
@@ -39,7 +41,7 @@ const DocumentsPage: React.FC = () => {
                 }
             })
         }
-    }, [socket, documents]);
+    }, [socket]);
     const handleOpenDialog = () => {
         setIsDialogOpen(true);
     };
@@ -54,12 +56,22 @@ const DocumentsPage: React.FC = () => {
                 <Typography variant="h1" style={{ width: 'fit-content', fontSize: '2rem' }}>
                     Documents Page
                 </Typography>
-                <Button variant="contained" style={{ width: 'fit-content'}} onClick={handleOpenDialog}>
-                    ADD A DOCUMENT
-                </Button>
+                <Logout />
             </Box>
             <div style={{ display: 'flex', flexDirection: 'row', gap: '2%', marginTop:'2%'}}>
                 {documents.map((document, index) => <DocumentCard key={index} document={document} />)}
+                {documents.length === 0 &&
+                    <div style={{width: '100vw', height: '50vh', display:'flex', justifyContent:'center', alignItems:'center'}}>
+                        <Typography variant="overline" gutterBottom sx={{ display: 'block' }}>
+                            NO DOCUMENTS TO SHOW!
+                        </Typography>
+                    </div>
+                }
+            </div>
+            <div style={{position: 'fixed', bottom: '2rem', right: '2rem', zIndex: '1000'}}>
+                <Fab color="primary" aria-label="add" onClick={handleOpenDialog}>
+                    <AddIcon />
+                </Fab>
             </div>
             <Dialog open={isDialogOpen} onClose={handleCloseDialog}>
                 <DialogTitle>Add New Document</DialogTitle>

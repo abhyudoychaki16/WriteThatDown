@@ -16,7 +16,6 @@ const DocumentSchema = new Schema({
     name: {
         type: String,
         required: true,
-        unique: true,
     },
     content: {
         type: String,
@@ -45,5 +44,7 @@ const DocumentSchema = new Schema({
         required: true
     }
 });
+
+DocumentSchema.index({ name: 1, folderID: 1 }, { unique: true });
 
 export const Document = model<IDocument>('Document', DocumentSchema, 'Documents');

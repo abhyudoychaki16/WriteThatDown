@@ -1,6 +1,6 @@
 import React from "react";
 import QuillApp from "./pages/QuillApp";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthPage from "./pages/AuthPage";
 
 import { AppSocketProvider } from "./utils/context";
@@ -16,6 +16,7 @@ const App: React.FC = () => {
                     <Route path="/folders" element={<FolderPage />} />
                     <Route path="/folders/:id" element={<DocumentsPage />} />
                     <Route path="/document/:documentID" element={<QuillApp />} />
+                    <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </BrowserRouter>
         </AppSocketProvider>

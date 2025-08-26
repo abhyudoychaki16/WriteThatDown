@@ -56,10 +56,14 @@ export const addCommentToDocument = async (documentID: string, userID: string, c
     }
 }
 
-const saveChanges = async (documentID: string, changes: string) => {
-    await Document.findByIdAndUpdate(documentID, {
-        content: changes // this line should be changed
+const saveChanges = async (documentID: string, changes: {}[]): Promise<void> => {
+    return new Promise(resolve => {
+        console.log(changes);
+        resolve();
     })
+    // await Document.findByIdAndUpdate(documentID, {
+    //     content: changes // this line should be changed
+    // })
 }
 
 type F = typeof saveChanges
@@ -78,7 +82,7 @@ const debounce = (func: F, timeToWait: number): F => {
     };
 }
 
-export const editDocument = async (documentID: string, userID: string, changes: string): Promise<void> => {
+export const editDocument = async (documentID: string, userID: string, changes: {}[]): Promise<void> => {
     const document = await findDocument(documentID);
     const folder = await findFolder(document.parent);
 
