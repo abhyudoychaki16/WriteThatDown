@@ -11,6 +11,7 @@ export const CHECKFORUSER = 'check';
 export const CREATE_DOCUMENT = 'createDocument' // create
 export const GET_DOCUMENT = 'getDocument'; // read
 export const EDIT_DOCUMENT = 'editDocument'; // edit
+export const SAVE_DOCUMENT = 'saveDocument' // save document content to db
 export const MODIFY_DOCUMENT = 'modifyDocument' // modify document information, permissions
 export const DELETE_DOCUMENT = 'deleteDocument'; // delete
 export const COMMENT_DOCUMENT = 'commentDocument' // comment

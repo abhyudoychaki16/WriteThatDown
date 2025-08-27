@@ -3,7 +3,7 @@ import { Server } from 'socket.io'
 import { createServer } from 'http';
 import { frontendURL, port } from './config';
 import cors from 'cors';
-import { COMMENT_DOCUMENT, CREATE_DOCUMENT, CREATE_FOLDER, DELETE_DOCUMENT, DELETE_FOLDER, DISCONNECT, EDIT_DOCUMENT, EXIT_DOCUMENT, GET_ALL_FOLDERS, GET_DOCUMENT, GET_FOLDER, LOGIN, MODIFY_DOCUMENT, MODIFY_FOLDER, SIGNUP } from './socketEventTypes';
+import { COMMENT_DOCUMENT, CREATE_DOCUMENT, CREATE_FOLDER, DELETE_DOCUMENT, DELETE_FOLDER, DISCONNECT, EDIT_DOCUMENT, EXIT_DOCUMENT, GET_ALL_FOLDERS, GET_DOCUMENT, GET_FOLDER, LOGIN, MODIFY_DOCUMENT, MODIFY_FOLDER, SAVE_DOCUMENT, SIGNUP } from './socketEventTypes';
 import { connectToDatabase } from './db';
 import createDocument from './DocumentUtils/CreateDocument';
 import createFolder from './FolderUtils/CreateFolder';
@@ -13,6 +13,7 @@ import { createUser } from './UserUtils/CreateUser';
 import { deleteFolder, getFoldersForUser, modifyFolder, switchToFolder } from './FolderUtils/FolderUtilfns';
 import { verifyJWTTokenAndConnect, verifyUserLogin } from './UserUtils/Login';
 import { Role } from './types';
+import { debouncedSaveChanges as saveChanges} from './DocumentUtils/DocumentUtilfns';
 
 // express setup
 const expressApp = express();
@@ -433,6 +434,37 @@ io.on('connection', (socket: UserSocket) => {
                     })
                     console.log("Changes broadcasted to ", sock.user?.name);
                 }
+            })
+        }
+        catch(error) {
+            console.log("Error: ", error);
+            callback({
+                type: "error",
+                error: error
+            })
+        }
+    })
+
+    socket.on(SAVE_DOCUMENT, async (documentInformation: {
+        documentID: string,
+        newDocumentContent: string
+    }, callback) => {
+        // verify the user
+        // and save the document
+        console.log(`Save document received for document id: ${documentInformation.documentID}`);
+        if(!socket.user){
+            callback({
+                type: "error",
+                message: "Login not validated!"
+            })
+            return;
+        }
+        const { documentID, newDocumentContent } = documentInformation;
+        try{
+            await saveChanges(documentID,String(socket.user?._id), newDocumentContent);
+            callback({
+                type: "success",
+                message: "Document saved successfully"
             })
         }
         catch(error) {

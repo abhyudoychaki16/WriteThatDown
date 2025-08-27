@@ -161,6 +161,21 @@ export const sendChangesInData = async (socket: Socket, documentID: string, chan
     })
 }
 
+export const saveChangesInData = async (socket: Socket, documentID: string, newDocumentContent: string): Promise<{ type: string }> => {
+    return new Promise(( resolve ) => {
+        socket.emit("saveDocument", ({ documentID: documentID, newDocumentContent: newDocumentContent }), (response: {
+            type: string,
+            message?: string,
+            error?: string,
+        }) => {
+            if(response.type === "error"){
+                resolve({type:"error"})
+            }
+            resolve({ type:"success" });
+        })
+    })
+}
+
 export const cleanUp = (socket: Socket) => {
     socket.disconnect();
 }

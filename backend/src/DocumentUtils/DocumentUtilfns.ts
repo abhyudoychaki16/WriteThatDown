@@ -4,6 +4,7 @@
 
 import { accessVerifier } from "../ActionMapUtils/ActorAccessVerification";
 import { COMMENT, DELETE, EDIT, MODIFY, VIEW } from "../ActionMapUtils/DocumentActorSpecifications";
+import { SAVE_TIMEOUT } from "../config";
 import { findFolder } from "../FolderUtils/FolderUtilfns";
 import { IDocument } from "../interfaces";
 import { Document } from "../models/Document";
@@ -55,17 +56,6 @@ export const addCommentToDocument = async (documentID: string, userID: string, c
         console.log("Failed to add edit to db!", error);
     }
 }
-
-const saveChanges = async (documentID: string, changes: {}[]): Promise<void> => {
-    return new Promise(resolve => {
-        console.log(changes);
-        resolve();
-    })
-    // await Document.findByIdAndUpdate(documentID, {
-    //     content: changes // this line should be changed
-    // })
-}
-
 type F = typeof saveChanges
 let timerId: NodeJS.Timeout | null = null;
 
@@ -82,31 +72,39 @@ const debounce = (func: F, timeToWait: number): F => {
     };
 }
 
-export const editDocument = async (documentID: string, userID: string, changes: {}[]): Promise<void> => {
+const saveChanges = async (documentID: string, userID: string, newDocumentContent: string): Promise<void> => {
     const document = await findDocument(documentID);
     const folder = await findFolder(document.parent);
 
     if(document.owner !== userID && !accessVerifier(document, userID, EDIT) && !accessVerifier(folder, userID, EDIT)){
         throw new Error("User Unauthorized to edit document!");
     }
+    await Document.findByIdAndUpdate(documentID, {
+        content: newDocumentContent
+    })
+    console.log("Changes saved to db");
+}
 
-    // const document = editorFlags.documentFlags.doc;
-    // this would be required when we perform recon based changes
-    
-    const debouncedSaveChanges = debounce(saveChanges, 1000);
-    // logic behind 1 second delay:
-    // average typing speed of a person: 200 characters per minute.
-    // this means 0.3 seconds per character
-    // or 300 ms per character
-    // autosave happens for every 3.33 characters best
+export const debouncedSaveChanges = debounce(saveChanges, SAVE_TIMEOUT);
+// logic behind 1 second delay:
+// average typing speed of a person: 200 characters per minute.
+// this means 0.3 seconds per character
+// or 300 ms per character
+// autosave happens for every 3.33 characters best
 
-    // even if the person sends a save request to the backend,
-    // we can use this for now to avoid overwhelming the backend
-    // only con: max 1 second delay on pressing save,
-    // but that much is normal, also on apps like Notion, Google Docs
-    // will help to avoid overwhelming the backend.
+// even if the person sends a save request to the backend,
+// we can use this for now to avoid overwhelming the backend
+// only con: max 1 second delay on pressing save,
+// but that much is normal, also on apps like Notion, Google Docs
+// will help to avoid overwhelming the backend.
 
-    await debouncedSaveChanges(documentID, changes);
+export const editDocument = async (documentID: string, userID: string, changes: object[]): Promise<void> => {
+    const document = await findDocument(documentID);
+    const folder = await findFolder(document.parent);
+
+    if(document.owner !== userID && !accessVerifier(document, userID, EDIT) && !accessVerifier(folder, userID, EDIT)){
+        throw new Error("User Unauthorized to edit document!");
+    }
 }
 
 export const deleteDocument = async (documentID: string, userID: string): Promise<void> => {
