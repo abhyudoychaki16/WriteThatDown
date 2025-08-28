@@ -1,12 +1,16 @@
 services:
   backend:
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGODB_URL=${MONGODB_URL}
+      - PORT=${PORT}
+      - FRONTEND_URL=${FRONTEND_URL}
     hostname: backend
     build:
       context: .
       target: backend-runtime
     working_dir: /app/backend
-    environment:
-      - NODE_ENV=production
     ports:
       - "4000:4000"
     command: ["node", "/app/backend/dist/app.js"]
@@ -16,6 +20,10 @@ services:
 
   frontend:
     hostname: frontend
+    environment:
+      - VITE_HTTP_ENDPOINT=${VITE_HTTP_ENDPOINT}
+      - VITE_SOCKET_ENDPOINT=${VITE_SOCKET_ENDPOINT}
+      - VITE_JWT_SECRET=${VITE_JWT_SECRET}
     build:
       context: .
       target: frontend-runtime
