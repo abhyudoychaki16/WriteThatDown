@@ -1,8 +1,10 @@
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
-import { backendURL } from "../config";
+import { HTTP_ENDPOINT as backendURL } from "../config";
+import { Op } from "quill-delta";
 
 export const sendSignupData = async (name: string, email: string, enterprise: string, password: string): Promise<boolean> => {
+    console.log(backendURL)
     const response: {
         type: string,
         error?: string,
@@ -146,7 +148,7 @@ export const getDocumentContent = async (socket: Socket, documentID: string): Pr
     })
 }
 
-export const sendChangesInData = async (socket: Socket, documentID: string, changes: []): Promise<{ type: string }> => {
+export const sendChangesInData = async (socket: Socket, documentID: string, changes: Op[]): Promise<{ type: string }> => {
     return new Promise(( resolve ) => {
         socket.emit("editDocument", ({ documentID: documentID, changes: changes }), (response: {
             type: string,

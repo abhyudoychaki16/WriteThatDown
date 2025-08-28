@@ -1,0 +1,31 @@
+services:
+  backend:
+    hostname: backend
+    build:
+      context: .
+      target: backend-runtime
+    working_dir: /app/backend
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "4000:4000"
+    command: ["node", "/app/backend/dist/app.js"]
+    restart: unless-stopped
+    volumes:
+      - ./backend/.env:/app/backend/.env:ro
+
+  frontend:
+    hostname: frontend
+    build:
+      context: .
+      target: frontend-runtime
+    ports:
+      - "80:80"
+    # depends_on:
+    #   - backend
+    restart: unless-stopped
+    volumes:
+      - ./frontend/.env:/app/frontend/.env:ro
+    # Uncomment if you want to use a custom nginx.conf
+    # volumes:
+    #   - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro

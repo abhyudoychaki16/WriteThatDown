@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "build": "rm -rf dist && tsc",
     "start": "tsc && node dist/app.js",
     "dev": "nodemon src/app.ts"
   },

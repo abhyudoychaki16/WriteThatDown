@@ -27,7 +27,7 @@ const QuillApp: React.FC = () => {
             console.log("Content set: ", content);
         }
         else {
-            sendChangesInData(socket!, documentID!, ((lastChange?.Delta as Delta)?.ops));
+            sendChangesInData(socket!, documentID!, ((lastChange.Delta as Delta).ops));
             if(quillRef.current?.getText() !== undefined){
                 saveChangesInData(socket!, documentID!, quillRef.current?.getText()!);
             }
