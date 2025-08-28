@@ -36,4 +36,4 @@ RUN npm ci --omit=dev
 EXPOSE 80 4000
 
 # Start both backend and nginx
-CMD ["sh", "-c", "node /app/backend/dist/app.js & nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "node /app/backend/dist/app.js"]
