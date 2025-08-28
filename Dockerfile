@@ -30,7 +30,7 @@ RUN npm ci --omit=dev
 # --------- Nginx for frontend ---------
 # FROM nginx:alpine AS runtime
 # COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
-COPY --from=backend-runtime /app/backend /app/backend
+# COPY --from=backend-runtime /app/backend /app/backend
 
 # Expose ports: 80 for frontend, 4000 for backend
 EXPOSE 80 4000
