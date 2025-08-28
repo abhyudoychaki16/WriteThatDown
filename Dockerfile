@@ -28,7 +28,7 @@ WORKDIR /app/backend
 RUN npm ci --omit=dev
 
 # --------- Nginx for frontend ---------
-# FROM nginx:alpine AS frontend-runtime
+# FROM nginx:alpine AS runtime
 # COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 COPY --from=backend-runtime /app/backend /app/backend
 
