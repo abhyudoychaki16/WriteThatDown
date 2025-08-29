@@ -44,7 +44,7 @@ const io = new Server(httpServer,{
       origin: frontendURL,
       methods: ["GET", "POST"]
     }
-, transports: ['websocket']});
+});
 
 const connections: {
     [key: string]: UserSocket[]
