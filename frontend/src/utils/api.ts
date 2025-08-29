@@ -1,7 +1,9 @@
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
-import { HTTP_ENDPOINT as backendURL } from "../config";
+import { HTTP_ENDPOINT } from "../config";
 import { Op } from "quill-delta";
+
+const backendURL = HTTP_ENDPOINT === undefined ? "https:www.writethatdown.onrender.com" : HTTP_ENDPOINT;
 
 export const sendSignupData = async (name: string, email: string, enterprise: string, password: string): Promise<boolean> => {
     console.log(backendURL)

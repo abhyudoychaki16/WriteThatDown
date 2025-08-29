@@ -22,6 +22,4 @@ services:
       - VITE_HTTP_ENDPOINT=${VITE_HTTP_ENDPOINT}
       - VITE_SOCKET_ENDPOINT=${VITE_SOCKET_ENDPOINT}
       - VITE_JWT_SECRET=${VITE_JWT_SECRET}
-    depends_on:
-      - backend
     restart: always
