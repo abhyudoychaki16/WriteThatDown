@@ -1,8 +1,9 @@
+
 # --------- Build backend ---------
 FROM node:20-alpine AS backend-build
 WORKDIR /app/backend
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci
+RUN npm install
 COPY backend/ ./
 RUN npm run build
 
@@ -15,24 +16,25 @@ COPY frontend/ ./
 RUN npm run build
 
 # --------- Production image ---------
-FROM node:20-alpine AS backend-runtime
+FROM node:20-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Install serve globally
+RUN npm install -g serve
 
 # Copy backend build
 COPY --from=backend-build /app/backend /app/backend
 
-# Install only production dependencies
+# Copy frontend build into /app/frontend/dist
+COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
+
+# Install only production dependencies for backend
 WORKDIR /app/backend
 RUN npm ci --omit=dev
-
-# --------- Nginx for frontend ---------
-FROM nginx:alpine AS frontend-runtime
-COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
-COPY --from=backend-runtime /app/backend /app/backend
 
 # Expose ports: 80 for frontend, 4000 for backend
 EXPOSE 80 4000
 
-# Start both backend and nginx
-CMD ["sh", "-c", "node /app/backend/dist/app.js & nginx -g 'daemon off;'"]
+# Start both backend and serve for frontend
+CMD ["sh", "-c", "node /app/backend/dist/app.js & serve -s /app/frontend/dist -l 80"]

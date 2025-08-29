@@ -1,38 +1,36 @@
 services:
   backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend-build
+    working_dir: /app/backend
+    command: ["node", "dist/app.js"]
+    ports:
+      - "4000:4000"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
       - MONGODB_URL=${MONGODB_URL}
       - FRONTEND_URL=${FRONTEND_URL}
-    hostname: backend
-    build:
-      context: .
-      target: backend-runtime
-    working_dir: /app/backend
-    ports:
-      - "4000:4000"
-    command: ["node", "/app/backend/dist/app.js"]
-    restart: unless-stopped
     volumes:
-      - ./backend/.env:/app/backend/.env:ro
+      - ./backend:/app/backend
+    # depends_on:
+    #   - frontend
 
   frontend:
-    hostname: frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend-build
     environment:
+      - NODE_ENV=production
       - VITE_HTTP_ENDPOINT=${VITE_HTTP_ENDPOINT}
       - VITE_SOCKET_ENDPOINT=${VITE_SOCKET_ENDPOINT}
       - VITE_JWT_SECRET=${VITE_JWT_SECRET}
-    build:
-      context: .
-      target: frontend-runtime
+    working_dir: /app/frontend
+    command: ["npx", "serve", "-s", "dist", "-l", "80"]
     ports:
       - "80:80"
-    # depends_on:
-    #   - backend
-    restart: unless-stopped
     volumes:
-      - ./frontend/.env:/app/frontend/.env:ro
-    # Uncomment if you want to use a custom nginx.conf
-    # volumes:
-    #   - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/app/frontend
