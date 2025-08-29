@@ -1,11 +1,7 @@
+version: "3.9"
 services:
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: backend-build
-    working_dir: /app/backend
-    command: ["node", "dist/app.js"]
+    build: ./backend
     ports:
       - "4000:4000"
     environment:
@@ -13,24 +9,19 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - MONGODB_URL=${MONGODB_URL}
       - FRONTEND_URL=${FRONTEND_URL}
-    volumes:
-      - ./backend:/app/backend
-    # depends_on:
-    #   - frontend
+      - SALT_ROUNDS=${SALT_ROUNDS}
+      - PORT=${PORT}
+    restart: always
 
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: frontend-build
+    build: ./frontend
+    ports:
+      - "80:80"
     environment:
       - NODE_ENV=production
       - VITE_HTTP_ENDPOINT=${VITE_HTTP_ENDPOINT}
       - VITE_SOCKET_ENDPOINT=${VITE_SOCKET_ENDPOINT}
       - VITE_JWT_SECRET=${VITE_JWT_SECRET}
-    working_dir: /app/frontend
-    command: ["npx", "serve", "-s", "dist", "-l", "80"]
-    ports:
-      - "80:80"
-    volumes:
-      - ./frontend:/app/frontend
+    depends_on:
+      - backend
+    restart: always
