@@ -17,6 +17,7 @@ const DocumentsPage: React.FC = () => {
     useEffect(() => {
         if (socket === null) {
             const token = localStorage.getItem('token');
+            console.log("Token: ", token);
             if (token) {
                 const currentSocket = connectToSocket(token);
                 currentSocket.then((socket) => {
