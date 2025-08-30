@@ -92,7 +92,7 @@ export const getFolderContents = async (socket: Socket, folderID: string): Promi
         socket.emit("getFolder", ({ id: folderID }), (response: {
             type: string,
             folder?: string,
-            documents?: string[],
+            documents?: {_id: string, name: string}[],
             error?: string
         }) => {
             if(response.type === "error"){

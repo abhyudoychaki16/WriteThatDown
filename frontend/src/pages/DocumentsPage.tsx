@@ -96,7 +96,7 @@ const DocumentsPage: React.FC = () => {
                             alert("Failed to create document!");
                         }
                         else {
-                            setDocuments([...documents, documentID!]);
+                            setDocuments([...documents, { _id: documentID!, name: newDocumentName }]);
                         }
                         handleCloseDialog();
                     }} color="primary">
