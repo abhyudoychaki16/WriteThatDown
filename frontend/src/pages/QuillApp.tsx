@@ -23,13 +23,14 @@ const QuillApp: React.FC = () => {
             quillRef.current?.updateContents(lastChange.Delta);
         }
         else if(lastChange.Source === "API"){
-            quillRef.current?.setText(content);
-            console.log("Content set: ", content);
+            quillRef.current?.setContents(JSON.parse(content));
+            console.log("Content set: ", JSON.parse(content));
         }
         else {
             sendChangesInData(socket!, documentID!, ((lastChange.Delta as Delta).ops));
-            if(quillRef.current?.getText() !== undefined){
-                saveChangesInData(socket!, documentID!, quillRef.current?.getText()!);
+            if(quillRef.current?.getContents() !== undefined){
+                saveChangesInData(socket!, documentID!, JSON.stringify(quillRef.current?.getContents()));
+                console.log("Content saved: ", JSON.stringify(quillRef.current?.getContents()));
             }
         }
         setLastChange(null);

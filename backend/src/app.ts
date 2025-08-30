@@ -615,6 +615,6 @@ httpServer.listen(port, async () => {
 // Todos:
 // 1. Develop a way to authenticate users, and drop connections if they cannot be authenticated. (DONE)
 // 2. Develop a way to send only authenticated and allowed users access to the required document content. (DONE)
-// 3. Handle document edits (using recon, recon means that small commands will be sent to the backend, that will be handled by the frontend).
+// 3. Handle document edits (using recon, recon means that small commands will be sent to the backend, that will be handled by the frontend). (DONE)
 
 export { expressApp, io, httpServer }
