@@ -11,7 +11,7 @@ const DocumentsPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { socket, setSocket } = useContext(AppSocketContext);
-    const [documents, setDocuments] = useState<string[]>([]);
+    const [documents, setDocuments] = useState<{_id: string, name: string}[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [newDocumentName, setNewDocumentName] = useState<string>('');
     useEffect(() => {
@@ -60,7 +60,7 @@ const DocumentsPage: React.FC = () => {
                 <Logout />
             </Box>
             <div style={{ display: 'flex', flexDirection: 'row', gap: '2%', marginTop:'2%'}}>
-                {documents.map((document, index) => <DocumentCard key={index} document={document} />)}
+                {documents.map((document, index) => <DocumentCard key={index} document={document._id} documentName={document.name} />)}
                 {documents.length === 0 &&
                     <div style={{width: '100vw', height: '50vh', display:'flex', justifyContent:'center', alignItems:'center'}}>
                         <Typography variant="overline" gutterBottom sx={{ display: 'block' }}>

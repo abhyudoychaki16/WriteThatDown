@@ -25,11 +25,16 @@ export interface IActorMap {
     viewer: string[],
 }
 
+export interface IDocumentView {
+    _id: string,
+    name: string,
+}
+
 export interface IFolder extends Document {
     _id: Types.ObjectId,
     name: string,
     actorMap: IActorMap,
-    documents: string[]
+    documents: IDocumentView[]
 }
 
 export interface IDocument extends Document {

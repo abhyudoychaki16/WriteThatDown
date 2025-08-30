@@ -5,10 +5,12 @@ import { useNavigate } from 'react-router-dom';
 
 interface DocumentCardProps {
     document: string,
+    documentName: string,
 }
 
 const FolderContainer = styled(Box)({
     width: 'fit-content',
+    minWidth: '220px',
     height: '115px',
     backgroundColor: '#1976d2', // Main folder color
     color: '#ffffff', // Text color
@@ -31,11 +33,11 @@ const FolderTab = styled(Box)({
     borderRadius: '4px 4px 0 0',
 });
 
-const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
+const DocumentCard: React.FC<DocumentCardProps> = ({ document, documentName }) => {
     const navigate = useNavigate();
 
     const handleFolderClick = () => {
-        navigate(`/document/${document}`);
+        navigate(`/document/${document}/${documentName}`);
     }
 
     return (
@@ -43,7 +45,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
             <Box position="relative" display="inline-block">
                 <FolderTab />
                 <FolderContainer>
-                    <Typography variant="h6">{document}</Typography>
+                    <Typography variant="h6">{documentName}</Typography>
                 </FolderContainer>
             </Box>
         </div>

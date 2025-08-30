@@ -1,7 +1,7 @@
 // provide utilities to manage folders, provide and check access
 
 import Folder from "../models/Folder"
-import { IFolder } from "../interfaces";
+import { IDocumentView, IFolder } from "../interfaces";
 import { DELETE, MODIFY, SWITCH } from "../ActionMapUtils/FolderActorSpecifications";
 import { accessVerifier } from "../ActionMapUtils/ActorAccessVerification";
 import { Document } from "../models/Document";
@@ -51,15 +51,15 @@ export const deleteFolder = async (folderID: string, userID: string): Promise<st
     if(!accessVerifier(folder, userID, DELETE)){
         throw new Error("Access not allowed");
     }
-    const documentIDs = folder.documents;
+    const documents = folder.documents;
     // recursively delete all documents in the folder
-    folder.documents.forEach(async (documentID) => {
-        await Document.findByIdAndDelete(documentID);
+    folder.documents.forEach(async (document: IDocumentView) => {
+        await Document.findByIdAndDelete(document._id);
     })
 
     // ws.broadcast({folderID: folderID, delete: true})
     await Folder.findByIdAndDelete(folder._id);
-    return documentIDs;
+    return documents.map((doc: IDocumentView) => doc._id);
 }
 
 export const getFoldersForUser = async (userID: string): Promise <{id:string, name: string}[]> => { 
@@ -74,4 +74,11 @@ export const getFoldersForUser = async (userID: string): Promise <{id:string, na
         folderMap.push({id: String(folder._id), name: folder.name})
     });
     return folderMap;
+}
+
+export const removeDocumentFromFolder = async (folderID: string, documentID: string): Promise<void> => {
+    const folder = await findFolder(folderID);
+    await Folder.findByIdAndUpdate(folderID, {
+        documents: folder.documents.filter((doc: IDocumentView) => doc._id !== documentID)
+    });
 }

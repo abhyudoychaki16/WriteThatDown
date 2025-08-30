@@ -5,7 +5,7 @@
 import { accessVerifier } from "../ActionMapUtils/ActorAccessVerification";
 import { COMMENT, DELETE, EDIT, MODIFY, VIEW } from "../ActionMapUtils/DocumentActorSpecifications";
 import { SAVE_TIMEOUT } from "../config";
-import { findFolder } from "../FolderUtils/FolderUtilfns";
+import { findFolder, removeDocumentFromFolder } from "../FolderUtils/FolderUtilfns";
 import { IDocument } from "../interfaces";
 import { Document } from "../models/Document";
 import { Role } from "../types";
@@ -117,6 +117,8 @@ export const deleteDocument = async (documentID: string, userID: string): Promis
     
     // ws.broadcast({delete: true})
     await Document.findByIdAndDelete(documentID);
+    await removeDocumentFromFolder(document.parent, documentID);
+    console.log("Document deleted successfully");
 }
 
 export const modifyDocument = async (documentID: string, userID: string, userIDToAdd: string, roleToAdd: Role): Promise<void> => {

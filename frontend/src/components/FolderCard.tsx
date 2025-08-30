@@ -11,7 +11,8 @@ interface FolderCardProps {
 }
 
 const FolderContainer = styled(Box)({
-    width: '220px',
+    width: 'fit-content',
+    minWidth: '220px',
     height: '115px',
     backgroundColor: '#1976d2', // Main folder color
     color: '#ffffff', // Text color

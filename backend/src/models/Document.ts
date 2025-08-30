@@ -12,7 +12,7 @@ const CommentSchema = new Schema<IComment>({
     },
 });
 
-const DocumentSchema = new Schema({
+export const DocumentSchema = new Schema({
     name: {
         type: String,
         required: true,

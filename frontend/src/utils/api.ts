@@ -86,7 +86,7 @@ export const getFoldersForUser = async (socket: Socket): Promise<{id: string, na
     })
 }
 
-export const getFolderContents = async (socket: Socket, folderID: string): Promise<{type: string, documents?: string[]}> => {
+export const getFolderContents = async (socket: Socket, folderID: string): Promise<{type: string, documents?: {_id: string, name: string}[]}> => {
     console.log(folderID);
     return new Promise(( resolve ) => {
         socket.emit("getFolder", ({ id: folderID }), (response: {

@@ -17,9 +17,9 @@ const FolderSchema = new Schema({
         },
     },
     documents: {
-        type: [String],
+        type: [],
         required: true,
-        default: [],
+        default: []
     }
 });
 

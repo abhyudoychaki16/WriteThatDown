@@ -15,7 +15,7 @@ const App: React.FC = () => {
                     <Route path="/login" element={<AuthPage />} />
                     <Route path="/folders" element={<FolderPage />} />
                     <Route path="/folders/:id" element={<DocumentsPage />} />
-                    <Route path="/document/:documentID" element={<QuillApp />} />
+                    <Route path="/document/:documentID/:documentName" element={<QuillApp />} />
                     <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </BrowserRouter>

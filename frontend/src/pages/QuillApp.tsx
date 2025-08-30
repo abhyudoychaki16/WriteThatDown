@@ -10,7 +10,7 @@ import { connectToSocket, getDocumentContent, saveChangesInData, sendChangesInDa
 const QuillApp: React.FC = () => {
     const { socket, setSocket } = useContext(AppSocketContext);
     console.log("Socket: ", socket);
-    const { documentID } = useParams();
+    const { documentID, documentName } = useParams<{ documentID?: string; documentName?: string }>();
     const [content, setContent] = useState<string>('');
     const [range, setRange] = useState<Range | null>(null);
     const [lastChange, setLastChange] = useState<{"Delta": Delta, "Source": "Broadcast" | "API" | undefined} | null>(null);
@@ -79,7 +79,7 @@ const QuillApp: React.FC = () => {
     }, [range, lastChange]);
     return (
         <div>
-            <div>Document: {documentID}</div>
+            <div>Document: {documentName}</div>
             <div style={{ width: "1241px", height: "1754px", marginLeft: 'auto', marginRight: 'auto' }}>
                 <Editor
                     ref={quillRef}

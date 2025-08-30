@@ -182,6 +182,7 @@ io.on('connection', (socket: UserSocket) => {
         try{
             const currentUser = socket.user;
             const folder = await switchToFolder(id, String(currentUser._id));
+            console.log(folder.documents);
             callback({
                 type: "success",
                 folder: folder.name,
