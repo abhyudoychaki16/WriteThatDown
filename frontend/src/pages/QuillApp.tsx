@@ -23,6 +23,7 @@ const QuillApp: React.FC = () => {
             quillRef.current?.updateContents(lastChange.Delta);
         }
         else if(lastChange.Source === "API"){
+            if(content === "") return;
             quillRef.current?.setContents(JSON.parse(content));
             console.log("Content set: ", JSON.parse(content));
         }
